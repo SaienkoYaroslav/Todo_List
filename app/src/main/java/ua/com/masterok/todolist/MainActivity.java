@@ -20,32 +20,28 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView rvNotes;
     private FloatingActionButton buttonAddNewNote;
     private NotesAdapter notesAdapter;
+    private NoteDatabase noteDatabase;
 
-    private ArrayList<Note> notes = new ArrayList<>();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        showNotes();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         init();
-
-        Random random = new Random();
-        // random.nextInt(3) - рандомне число від 0 до 3, не включаючи 3
-        for (int i = 0; i < 20; i++) {
-            Note note = new Note(i, "Note " + i, random.nextInt(3));
-            notes.add(note);
-        }
-
         adapter();
-        showNotes();
-
         onClickButtonAddNote();
-
     }
 
     private void init() {
         rvNotes = findViewById(R.id.recycler_view_notes);
         buttonAddNewNote = findViewById(R.id.button_add_note);
+
+        noteDatabase = NoteDatabase.getInstance(getApplication());
     }
 
     private void adapter() {
@@ -89,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
                         // отримання позиції елемента по якому був виконаний свайп
                         int position = viewHolder.getAdapterPosition();
                         Note note = notesAdapter.getNotes().get(position);
-                        notes.remove(note.getId());
+                        noteDatabase.notesDao().remove(note.getId());
                         // оновлює список
                         showNotes();
                     }
@@ -98,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNotes() {
-        notesAdapter.setNotes(notes);
+        notesAdapter.setNotes(noteDatabase.notesDao().getNotes());
     }
 
     private void onClickButtonAddNote() {

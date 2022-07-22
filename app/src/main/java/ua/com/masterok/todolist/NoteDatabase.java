@@ -6,7 +6,9 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {Note.class}, version = 1)
+// exportSchema = false - за замовчуванням стоїїть тру. Зберігає дані всіх версій. Інколи, якщо
+// встановлено тру аппка може не зібратись
+@Database(entities = {Note.class}, version = 1, exportSchema = false)
 public abstract class NoteDatabase extends RoomDatabase {
 
     // singleton
@@ -17,7 +19,12 @@ public abstract class NoteDatabase extends RoomDatabase {
     // витоку пам’яті.
     public static NoteDatabase getInstance(Application application) {
         if (instance == null) {
-            instance = Room.databaseBuilder(application, NoteDatabase.class, DB_NAME).build();
+            instance = Room.databaseBuilder(
+                            application,
+                            NoteDatabase.class,
+                            DB_NAME
+                    ).allowMainThreadQueries() // для тестів (дозволяє працювати з БД в головному потоці)
+                    .build();
         }
         return instance;
     }

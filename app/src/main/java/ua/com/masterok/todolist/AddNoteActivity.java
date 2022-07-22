@@ -18,6 +18,7 @@ public class AddNoteActivity extends AppCompatActivity {
     private RadioGroup radioGroupPriority;
     private RadioButton radioButtonLow, radioButtonMedium, radioButtonHigh;
     private Button buttonSave;
+    private NoteDatabase noteDatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +35,8 @@ public class AddNoteActivity extends AppCompatActivity {
         radioButtonMedium = findViewById(R.id.radio_button_medium);
         radioButtonHigh = findViewById(R.id.radio_button_high);
         buttonSave = findViewById(R.id.button_save);
+
+        noteDatabase = NoteDatabase.getInstance(getApplication());
     }
 
     private void onClickButtonSave() {
@@ -53,6 +56,8 @@ public class AddNoteActivity extends AppCompatActivity {
             return;
         }
         int priority = getPriority();
+        Note note = new Note(text, priority);
+        noteDatabase.notesDao().add(note);
 
         finish();
     }
