@@ -2,6 +2,8 @@ package ua.com.masterok.todolist;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Toast;
 
@@ -12,8 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.ArrayList;
-import java.util.Random;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -21,6 +22,15 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton buttonAddNewNote;
     private NotesAdapter notesAdapter;
     private NoteDatabase noteDatabase;
+
+    // Handler - клас, який може тримати в собі посилання на головний потік
+    // Потрібен для оновлення вью. Так як з БД ми маємо працювати у фоновому потоці, а оновлювати вью
+    // у фоновому потоці не можна. Вью оновлюються тільки у мейн потоці
+    // Looper.getMainLooper() - цей параметр дозволяє хендлеру тримати посилання на головний потік
+    private Handler handler = new Handler(Looper.getMainLooper());
+    // Тепер в цей об'єкт можна відправляти повідомлення, які хендлер буде обробляти
+    // Повідомлення будуть типу Ранбл. Тобто нашому об'єкту handler буде відправлятись об'єкт типу
+    // ранбл і хендлер буде викликати в переданого об'єкту метод ран в головному потоці.
 
     @Override
     protected void onResume() {
@@ -85,16 +95,44 @@ public class MainActivity extends AppCompatActivity {
                         // отримання позиції елемента по якому був виконаний свайп
                         int position = viewHolder.getAdapterPosition();
                         Note note = notesAdapter.getNotes().get(position);
-                        noteDatabase.notesDao().remove(note.getId());
-                        // оновлює список
-                        showNotes();
+                        Thread thread = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // видалення даних у фоновому потоці
+                                noteDatabase.notesDao().remove(note.getId());
+                                // showNotes() викликаємо в головному потоці за допомогою хендлера
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        // оновлює список
+                                        showNotes();
+                                    }
+                                });
+
+                            }
+                        });
+                        thread.start();
                     }
                 });
         itemTouchHelper.attachToRecyclerView(rvNotes);
     }
 
     private void showNotes() {
-        notesAdapter.setNotes(noteDatabase.notesDao().getNotes());
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // отримання даних з бд у фоновому потоці
+                List<Note> notes = noteDatabase.notesDao().getNotes();
+                // відображення даних в головному потоці
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        notesAdapter.setNotes(notes);
+                    }
+                });
+            }
+        });
+        thread.start();
     }
 
     private void onClickButtonAddNote() {

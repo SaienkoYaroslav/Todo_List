@@ -6,7 +6,7 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-// exportSchema = false - за замовчуванням стоїїть тру. Зберігає дані всіх версій. Інколи, якщо
+// exportSchema = false - за замовчуванням стоїть тру. Зберігає дані всіх версій. Інколи, якщо
 // встановлено тру аппка може не зібратись
 @Database(entities = {Note.class}, version = 1, exportSchema = false)
 public abstract class NoteDatabase extends RoomDatabase {
@@ -23,8 +23,7 @@ public abstract class NoteDatabase extends RoomDatabase {
                             application,
                             NoteDatabase.class,
                             DB_NAME
-                    ).allowMainThreadQueries() // для тестів (дозволяє працювати з БД в головному потоці)
-                    .build();
+                    ).build();
         }
         return instance;
     }
