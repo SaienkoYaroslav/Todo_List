@@ -13,6 +13,8 @@ import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
 public class AddNoteActivity extends AppCompatActivity {
 
@@ -20,14 +22,23 @@ public class AddNoteActivity extends AppCompatActivity {
     private RadioGroup radioGroupPriority;
     private RadioButton radioButtonLow, radioButtonMedium, radioButtonHigh;
     private Button buttonSave;
-    private NoteDatabase noteDatabase;
+    private AddNoteViewModel viewModel;
+
+    // Handler - клас, який може тримати в собі посилання на головний потік
+    // Потрібен для оновлення вью. Так як з БД ми маємо працювати у фоновому потоці, а оновлювати вью
+    // у фоновому потоці не можна. Вью оновлюються тільки у мейн потоці
+    // Looper.getMainLooper() - цей параметр дозволяє хендлеру тримати посилання на головний потік
     private Handler handler = new Handler(Looper.getMainLooper());
+    // Тепер в цей об'єкт можна відправляти повідомлення, які хендлер буде обробляти
+    // Повідомлення будуть типу Ранбл. Тобто нашому об'єкту handler буде відправлятись об'єкт типу
+    // ранбл і хендлер буде викликати в переданого об'єкту метод ран в головному потоці.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_note);
         init();
+        viewModel();
         onClickButtonSave();
     }
 
@@ -38,8 +49,18 @@ public class AddNoteActivity extends AppCompatActivity {
         radioButtonMedium = findViewById(R.id.radio_button_medium);
         radioButtonHigh = findViewById(R.id.radio_button_high);
         buttonSave = findViewById(R.id.button_save);
+    }
 
-        noteDatabase = NoteDatabase.getInstance(getApplication());
+    private void viewModel() {
+        viewModel = new ViewModelProvider(this).get(AddNoteViewModel.class);
+        viewModel.getShouldCloseScreen().observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean shouldClose) {
+                if (shouldClose) {
+                    finish();
+                }
+            }
+        });
     }
 
     private void onClickButtonSave() {
@@ -60,20 +81,7 @@ public class AddNoteActivity extends AppCompatActivity {
         }
         int priority = getPriority();
         Note note = new Note(text, priority);
-
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                noteDatabase.notesDao().add(note);
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        finish();
-                    }
-                });
-            }
-        });
-        thread.start();
+        viewModel.saveNote(note);
     }
 
     private int getPriority() {

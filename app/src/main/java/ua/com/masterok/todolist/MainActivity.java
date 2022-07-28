@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -22,16 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView rvNotes;
     private FloatingActionButton buttonAddNewNote;
     private NotesAdapter notesAdapter;
-    private NoteDatabase noteDatabase;
-
-    // Handler - клас, який може тримати в собі посилання на головний потік
-    // Потрібен для оновлення вью. Так як з БД ми маємо працювати у фоновому потоці, а оновлювати вью
-    // у фоновому потоці не можна. Вью оновлюються тільки у мейн потоці
-    // Looper.getMainLooper() - цей параметр дозволяє хендлеру тримати посилання на головний потік
-    private Handler handler = new Handler(Looper.getMainLooper());
-    // Тепер в цей об'єкт можна відправляти повідомлення, які хендлер буде обробляти
-    // Повідомлення будуть типу Ранбл. Тобто нашому об'єкту handler буде відправлятись об'єкт типу
-    // ранбл і хендлер буде викликати в переданого об'єкту метод ран в головному потоці.
+    private MainViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,22 +37,13 @@ public class MainActivity extends AppCompatActivity {
     private void init() {
         rvNotes = findViewById(R.id.recycler_view_notes);
         buttonAddNewNote = findViewById(R.id.button_add_note);
-
-        noteDatabase = NoteDatabase.getInstance(getApplication());
+        // Правильне створення вьюмоделі, щоб вона переживала перевертання екрану
+        // viewModel буде знищино, коли ми повністю підемо з екрану (метод finish())
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
     }
 
     private void adapter() {
         notesAdapter = new NotesAdapter();
-        notesAdapter.setOnNoteClickListener(new NotesAdapter.OnNoteClickListener() {
-            @Override
-            public void onNoteClick(Note note) {
-                Toast.makeText(
-                        MainActivity.this,
-                        "Clicked" + note.getId(),
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-        });
         rvNotes.setAdapter(notesAdapter);
 
         // підписуємся на LiveData
@@ -70,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         // активіті (this)
         // 2 - передається об`єкт який реалізує інтерфейс обсервер. Цей інтерфейс реалізує 1 метод
         // який необхідно перевизначити. Створимо об'єкт анонімного класу
-        noteDatabase.notesDao().getNotes().observe(this, new Observer<List<Note>>() {
+        viewModel.getNotes().observe(this, new Observer<List<Note>>() {
             @Override
             // В цей метод приходить колекція всіх заміток. Цей метод викликається кожного разу коли
             // в БД відбуваються зміни
@@ -107,14 +90,8 @@ public class MainActivity extends AppCompatActivity {
                         // отримання позиції елемента по якому був виконаний свайп
                         int position = viewHolder.getAdapterPosition();
                         Note note = notesAdapter.getNotes().get(position);
-                        Thread thread = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                // видалення даних у фоновому потоці
-                                noteDatabase.notesDao().remove(note.getId());
-                            }
-                        });
-                        thread.start();
+                        // видалення за MVVM архітектурою
+                        viewModel.remove(note);
                     }
                 });
         itemTouchHelper.attachToRecyclerView(rvNotes);
