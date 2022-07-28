@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -31,12 +32,6 @@ public class MainActivity extends AppCompatActivity {
     // Тепер в цей об'єкт можна відправляти повідомлення, які хендлер буде обробляти
     // Повідомлення будуть типу Ранбл. Тобто нашому об'єкту handler буде відправлятись об'єкт типу
     // ранбл і хендлер буде викликати в переданого об'єкту метод ран в головному потоці.
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        showNotes();
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +62,23 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         rvNotes.setAdapter(notesAdapter);
+
+        // підписуємся на LiveData
+        // У об'єкта LiveData можна викликати метод .observe(), тим самим підписавшись на всі зміни
+        // які будуть в БД
+        // В .observe() передається 2 параметри. 1 - об'єкт у якого є життєвий цикл. Передаємо
+        // активіті (this)
+        // 2 - передається об`єкт який реалізує інтерфейс обсервер. Цей інтерфейс реалізує 1 метод
+        // який необхідно перевизначити. Створимо об'єкт анонімного класу
+        noteDatabase.notesDao().getNotes().observe(this, new Observer<List<Note>>() {
+            @Override
+            // В цей метод приходить колекція всіх заміток. Цей метод викликається кожного разу коли
+            // в БД відбуваються зміни
+            public void onChanged(List<Note> notes) {
+                notesAdapter.setNotes(notes);
+            }
+        });
+
         // встановлено в xml
         //rvNotes.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 
@@ -100,39 +112,12 @@ public class MainActivity extends AppCompatActivity {
                             public void run() {
                                 // видалення даних у фоновому потоці
                                 noteDatabase.notesDao().remove(note.getId());
-                                // showNotes() викликаємо в головному потоці за допомогою хендлера
-                                handler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        // оновлює список
-                                        showNotes();
-                                    }
-                                });
-
                             }
                         });
                         thread.start();
                     }
                 });
         itemTouchHelper.attachToRecyclerView(rvNotes);
-    }
-
-    private void showNotes() {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                // отримання даних з бд у фоновому потоці
-                List<Note> notes = noteDatabase.notesDao().getNotes();
-                // відображення даних в головному потоці
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        notesAdapter.setNotes(notes);
-                    }
-                });
-            }
-        });
-        thread.start();
     }
 
     private void onClickButtonAddNote() {
