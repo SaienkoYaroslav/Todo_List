@@ -22,9 +22,6 @@ import java.util.List;
 
 public class MainViewModel extends AndroidViewModel {
 
-    // Якщо створити цей об'єкт через new LiveData<Integer>(), то доведеться перевизначати дуже багато методів
-    // можна використати успадковувача від LiveData - MutableLiveData;
-
     // ViewModel в архітектурі MVVM може взаємодіяти з Model, тому можна додати посилання на БД
     private NoteDatabase noteDatabase;
 

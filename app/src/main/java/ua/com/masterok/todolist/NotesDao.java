@@ -8,6 +8,8 @@ import androidx.room.Query;
 
 import java.util.List;
 
+import io.reactivex.rxjava3.core.Completable;
+
 // DAO - data access object (об'єкт доступу до даних)
 
 @Dao
@@ -23,7 +25,9 @@ public interface NotesDao {
     // onConflict = описує дію при ситуації, коли ми вставляємо в базу об'єкт який вже є в базі
     // Так можна реалізувати редагування
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void add(Note note);
+    // Completable - клас з бібліотеки RxJava3. На нього можна підписуватись. Потрібен, щоб знати
+    // успішно чи неуспішно виконався метод. Якщо не підписатись нічого не відбудеться
+    Completable add(Note note);
 
     // :id - через : передається параметр з методу remove(int id)
     @Query("DELETE FROM notes WHERE id = :id")
