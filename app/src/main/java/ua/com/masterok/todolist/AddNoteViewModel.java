@@ -9,6 +9,8 @@ import androidx.lifecycle.MutableLiveData;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.functions.Action;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
@@ -16,6 +18,16 @@ public class AddNoteViewModel extends AndroidViewModel {
 
     // Замість   private NoteDatabase noteDatabase;   створимо посилання відразу на NotesDao
     private NotesDao notesDao;
+
+    // Тип який повертає метод .subscribe() з RxJava. В цього об'єкта можна викликати метод
+    // dispose(), який відміняє підписку. Це потрібно виконати при знищенні ВьюМоделі, щоб не було витоку пам’яті
+    // За допомогою цього об'єкту можна керувати життєвим циклом підписки
+    // private Disposable disposable;
+
+    // Типу як колекція об'єктів Disposable. Потрібен, якщо в нас буде багато об'єктів Disposable і
+    // щоб в кожного окремо не викликати один і той же метод, можна його викликати в об'єкті CompositeDisposable
+    // перед цим об'єкти Disposable потрібно додати до CompositeDisposable через метод .add()
+    private CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     // Якщо створити об'єкт через new LiveData<Integer>(), то доведеться перевизначати дуже багато методів
     // можна використати успадковувача від LiveData - MutableLiveData;
@@ -40,7 +52,7 @@ public class AddNoteViewModel extends AndroidViewModel {
         // .observeOn() - перемикає потік для коду який йде після цього методу
         // AndroidSchedulers.mainThread() - це головний потік в RxJava. Робимо це для того щоб можна
         // було викликати метод .setValue(), так як він більш надійний
-        notesDao.add(note)
+        Disposable disposable = notesDao.add(note)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action() {
@@ -51,9 +63,16 @@ public class AddNoteViewModel extends AndroidViewModel {
                 shouldCloseScreen.setValue(true);
             }
         });
-
-
+        compositeDisposable.add(disposable);
     }
 
+    // Метод який викликаєтсья при закінченні життєвого циклу ВьюМоделі
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        // можна і так
+        //disposable.dispose();
 
+        compositeDisposable.dispose();
+    }
 }

@@ -31,6 +31,6 @@ public interface NotesDao {
 
     // :id - через : передається параметр з методу remove(int id)
     @Query("DELETE FROM notes WHERE id = :id")
-    void remove(int id);
+    Completable remove(int id);
 
 }
